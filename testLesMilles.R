@@ -111,10 +111,11 @@ tm_shape(phigh$osm_lines) +
       ) +
   tmap_options(max.categories = 1000)
 
-# PROJECTION OF THE WHOLE MAP  
+# PROJECTION OF THE MAP  
 crs <-  "+proj=longlat +datum=WGS84 +no_defs"
 
 #TRANSFORMING THE ROADS NETWORK FROM LINESTRING OBJECTS TO A SPATIAL LINES NETWORK
+# INSPIRED BY CHAPTER 12.8 https://geocompr.robinlovelace.net/transport.html#route-networks 
 waysMel <- as(phigh$osm_lines,"Spatial") %>% SpatialLinesNetwork() 
 
 # CHECKS 
@@ -126,22 +127,14 @@ class(waysMel@g)
 # DOING SOMETHING WITH THE NODS OF THE NETWORK TO CALCULATE THE CONNECTIVITY OF A ROAD
 e = edge_betweenness(waysMel@g)
 summary(e)
-##
+#####################
+
 png(filename="networkAnalysis.png")
 tm_shape(waysMel@sl) + tm_lines(lwd = e/3000) + tmap_options(limits = c(facets.view = 1,facets.plot = 1))
 dev.off()
 
-#p <- tm_shape(waysMel@sl) + tm_lines(lwd = e/3000) + tmap_options(limits = c(facets.view = 1,facets.plot = 1))
-
-# x <- c(1:10)
-# log(x)
-
-
-plot(waysMel@sl)
-
 # FIND THE ROUTES BETWEEN SPECIFIED START AND END POINTS
-
-#carefull, very time consuming calculations
+#VERY TIME CONSUMING
 
 network_routes <- sum_network_routes(waysMel,
                        start = waysMel@sl$id[1],
@@ -198,7 +191,7 @@ summary(pbuild)
 summary(phigh)
 summary(pamenity)
 
-################# write buildings to dxf ##############
+################# write buildings to dxf ############## DOES NOT WORK
 
 buildDXF <- as(pbuild$osm_polygons,"Spatial")
 class(buildDXF)
@@ -210,6 +203,7 @@ class(buildDXF)
 #          overwrite_layer = T
 #          )
 
+#INSPIRED BY http://r-sig-geo.2731867.n2.nabble.com/save-SpatialPolygonsDataFrame-as-dxf-file-td7589253.html
 
 # writeOGR(obj = buildDXF[,c(1,2)], 
 #          dsn = "buildings", 
@@ -220,16 +214,17 @@ class(buildDXF)
 # 
 # ogr2ogr("buildings/polygons.shp", "buildings.dxf", "polygons", "DXF")
 
+# INSPIRED BY: https://cran.r-project.org/web/packages/rgdal/rgdal.pdf 
 
-td <- file.path(getwd(), "buildings"); dir.create(td)
-td
-# BDR 2016-12-15 (MapInfo driver fails writing to directory with ".")
-if(nchar(Sys.getenv("OSGEO4W_ROOT")) > 0) {
-  OLDPWD <- getwd()
-  setwd(td)
-  td <- "."
-}
-writeOGR(buildDXF, td, "polygons", driver="DXF")
-try(writeOGR(buildDXF, td, "polygons", driver="DXF"))
-writeOGR(buildDXF, td, "polygons", driver="DXF", overwrite_layer=TRUE)
-ogrDrivers()
+# td <- file.path(getwd(), "buildings"); dir.create(td)
+# td
+# # BDR 2016-12-15 (MapInfo driver fails writing to directory with ".")
+# if(nchar(Sys.getenv("OSGEO4W_ROOT")) > 0) {
+#   OLDPWD <- getwd()
+#   setwd(td)
+#   td <- "."
+# }
+# writeOGR(buildDXF, td, "polygons", driver="DXF")
+# try(writeOGR(buildDXF, td, "polygons", driver="DXF"))
+# writeOGR(buildDXF, td, "polygons", driver="DXF", overwrite_layer=TRUE)
+# ogrDrivers()
