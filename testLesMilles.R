@@ -205,26 +205,26 @@ class(buildDXF)
 
 #INSPIRED BY http://r-sig-geo.2731867.n2.nabble.com/save-SpatialPolygonsDataFrame-as-dxf-file-td7589253.html
 
-# writeOGR(obj = buildDXF[,c(1,2)], 
-#          dsn = "buildings", 
-#          layer = "polygons", 
-#          driver="ESRI Shapefile",
-#          overwrite_layer = T
-#          )
-# 
-# ogr2ogr("buildings/polygons.shp", "buildings.dxf", "polygons", "DXF")
+ writeOGR(obj = buildDXF[,c(1,2)],
+          dsn = "buildings",
+          layer = "polygons",#
+          driver="ESRI Shapefile",
+          overwrite_layer = T
+          )
 
-# INSPIRED BY: https://cran.r-project.org/web/packages/rgdal/rgdal.pdf 
+ ogr2ogr("buildings/polygons.shp", "buildings.dxf", "polygons", "DXF")
 
-# td <- file.path(getwd(), "buildings"); dir.create(td)
-# td
-# # BDR 2016-12-15 (MapInfo driver fails writing to directory with ".")
-# if(nchar(Sys.getenv("OSGEO4W_ROOT")) > 0) {
-#   OLDPWD <- getwd()
-#   setwd(td)
-#   td <- "."
-# }
-# writeOGR(buildDXF, td, "polygons", driver="DXF")
-# try(writeOGR(buildDXF, td, "polygons", driver="DXF"))
-# writeOGR(buildDXF, td, "polygons", driver="DXF", overwrite_layer=TRUE)
-# ogrDrivers()
+# INSPIRED BY: https://cran.r-project.org/web/packages/rgdal/rgdal.pdf
+
+ td <- file.path(getwd(), "buildings"); dir.create(td)
+ td
+ # BDR 2016-12-15 (MapInfo driver fails writing to directory with ".")
+ if(nchar(Sys.getenv("OSGEO4W_ROOT")) > 0) {
+   OLDPWD <- getwd()
+   setwd(td)
+   td <- "."
+ }
+ writeOGR(buildDXF, td, "polygons", driver="DXF")
+ try(writeOGR(buildDXF, td, "polygons", driver="DXF"))
+ writeOGR(buildDXF, td, "polygons", driver="DXF", overwrite_layer=TRUE)
+ ogrDrivers()
