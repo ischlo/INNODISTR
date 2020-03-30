@@ -37,11 +37,14 @@ library(rgeos)
 library(rgdal)
 library(osmdata)
 library(ggmap)
+library(ggplot2)
 library(osmar)
 library(igraph)
 library(stplanr)
 library(png)
 library(gdalUtils)
+library(plotly)
+library(spatstat)
 
 getwd() #GET WORKING DIRECTORY
 setwd("/Users/ivann/Desktop/GIID/Melbourne") #TO SET WORKING DIRECTORY
@@ -131,7 +134,7 @@ crs <-  "+proj=longlat +datum=WGS84 +no_defs"
 
 #### TRANSFORMING THE ROADS NETWORK FROM LINESTRING OBJECTS TO A SPATIAL LINES NETWORK ####
 # INSPIRED BY CHAPTER 12.8 https://geocompr.robinlovelace.net/transport.html#route-networks 
-waysMel <- as(phigh$osm_lines,"Spatial") %>% SpatialLinesNetwork() 
+waysMel <- as(roadNetwork,"Spatial") %>% SpatialLinesNetwork() 
 
 # CHECKS 
 slotNames(waysMel)
@@ -201,19 +204,15 @@ tm_shape(waysMelSL) +
            ,breaks = c(0,1,7,11,13)  ## log or lin scale  log : c(0,2,4,6,8,10,12) ; lin : c(0,100,1000,10000,350000,60000)
            ,alpha = 1
            ,legend.col.show = F
-  ) + 
-  tm_shape(melbourneID) + 
-  # tm_polygons(col = "grey"
-  #             ,alpha = 0.3
-  #             ,legend.col.show = F
-  #             ) +
-  tm_borders(col = "black"
-             ,lwd = 5
-             ) +
-  tmap_options(limits = c(facets.view = 1,facets.plot = 1)) +
+  ) +
+  # tm_shape(melbourneID) + 
+  # tm_borders(col = "black"
+  #            ,lwd = 5
+  #            ) +
+  # tmap_options(limits = c(facets.view = 1,facets.plot = 1)) +
   tmap_options(max.categories = 1000)
 
-##### connectivity map with commercial ponits included ######
+##### connectivity map with porosity file commercial ponits included ######
 
 # tm_shape(waysMel@sl) + 
 #   tm_lines(#col = "name"
@@ -224,33 +223,132 @@ tm_shape(waysMelSL) +
 tm_shape(porosity) +
   tm_dots(
     col = "amenity",
+    id = "name",
     size = 0.06,
-    labels = "name",
+    labels = "amenity",
     legend.show = F,
     colorNA = "grey",
-    shapes.labels = "name"
   ) +
   tmap_options(max.categories = 1000)
 
+# Sorted by type of amenity : 
 
+tm_shape(Commercedata) +
+  tm_dots(col = "legend",
+          id = "name",
+          title = "Type of amenity",
+          size = 0.02
+            )
+
+#Density
+tm_shape(waysMelSL) + 
+  tm_lines(col = "black"
+           ,lwd =1
+           ,alpha = 0.9
+           ,legend.col.show = F
+  ) + tm_shape(Commercedata) +
+  tm_dots(col = "orange",
+          alpha = 0.7,
+          size = 0.01)
+
+tm_shape(melbourneID) +
+  tm_fill(col = "employment",
+          breaks = c(0,500,1000,2000,3000,4000,8000,12000)
+          )
+
+
+
+
+
+#### Attempt to make a density plot of commercial points ####
+
+# Commercedata$lon <- latlong$lon
+# Commercedata$lat <- latlong$lat
+# 
+# latlong <- do.call(rbind, st_geometry(Commercedata)) %>% 
+#   as_tibble() %>% setNames(c("lon","lat"))
+# 
+# densowin <- owin(xrange = c(min(latlong$lon),max(latlong$lon)),yrange = c(min(latlong$lat),max(latlong$lat)))
+# 
+# commercedens <- ppp(latlong$lon,latlong$lat,densowin)
+# 
+# Q <- quadratcount(commercedens, nx= , ny=100)
+# Q.d <- intensity(Q)
+# 
+# view(Q)
+# 
+# plot(intensity(Q, image=TRUE), main=NULL, las=1)  # Plot density raster
+#plot(Commercedata, pch=20, cex=0.6, col=rgb(0,0,0,.5), add=TRUE)  # Add points
+
+# ggplot(Commercedata, aes(x = lon, y = lat)) + 
+#   coord_equal() + 
+#   xlab('Longitude') + 
+#   ylab('Latitude') + 
+#   stat_density2d(aes(fill = ..level..), alpha = .5,
+#                  geom = "polygon", data = Commercedata) + 
+#   scale_fill_viridis_c() + 
+#   theme(legend.position = 'none')
+# 
+
+
+view(porosity)
 
 ############################### CLEANING THE DATA #####################################
 
 # FROM THE OSM API DATA WE KEEP ONLY THE FOLLOWING COLUMNS: c("osm_id","name","amenity","geometry")
 
-#### AMENITY
-view(pamenity$osm_polygons)
-summary(pamenity)
+view(colnames(porosity))
+
+#### AMENITY 
+
+# amenity points
+
+sumamenpoint <- vector(mode = "list",length = length(pamenity$osm_points))
+names(sumamenpoint) <- colnames(pamenity$osm_points)
+
+for (i in 3:length(pamenity$osm_points)-1) {
+  sumamenpoint[[i]] <- summary(as.factor(pamenity$osm_points[[i]]))
+}
+#summary of amenity points data
+view(sumamenpoint)
+#checks
+view(pamenity$osm_points[is.na(pamenity$osm_points$microbrewery) == F, ]) %>% qtm()
+
+view(pamenity$osm_points[which(pamenity$osm_points$amenity %in% x),]) %>% qtm()
+
+#Extracting points of interest for commerce commercial activity study
+
+x <- c("bar","bank","clinic","dentist","post_office","bbq","cafe","car_rental","stripclub","studio","car_wash","cinema","fast_food","food_court","ice_cream","internet_cafe","marketplace","nightclub","pharmacy","pub","restaurant")
+
+y <- c("Bar","Bank","Clinic","Dentist","Post Office","BBQ","Cafe","Car Rental","Stripclub","Studio","Car Wash","Cinema","Fast Food","Food Court","Ice Cream","Internet Cafe","Marketplace","Nightclub","Pharmacy","Pub","Restaurant")
+
+z <- list(x,y)
+names(z) <- c("osm_value","legend")
+z$legend[which(z$osm_value== "stripclub")] 
+Commercedata <- pamenity$osm_points[which(pamenity$osm_points$amenity %in% x),]
+
+k <- Commercedata$amenity
+
+for (i in 1:length(k)) {
+  k[i] <- z$legend[which(z$osm_value== k[i])] 
+}
+# Giving nice name to legend column
+Commercedata$legend <- k
 
 tm_shape(pamenity$osm_points) + 
   tm_dots(col = "amenity",
+          id = "name",
+          size = 0.06,
           legend.show = F
           ) +
   tmap_options(max.categories = 72)
+
+
 # AMENITY POINTS CLEANING
 #keep only those rows for which an amenity type is specified. amenity column != NA
 pamenity$osm_points <-  pamenity$osm_points[is.na(pamenity$osm_points$amenity)==F,c("osm_id","name","amenity","geometry")]
 
+## amenity lines
 
 view(pamenity$osm_lines)
 
@@ -356,7 +454,7 @@ view(phigh$osm_lines[which(phigh$osm_lines$junction == "roundabout"),])
 
 typeof(phigh$osm_lines$footway)
 
-
+view(phigh$osm_lines[which(phigh$osm_lines$name == "Elizabeth Street"),]) %>% qtm()
 
 qtm(phigh$osm_lines[which(phigh$osm_lines$footway == "sidewalk"),])
 
@@ -370,11 +468,13 @@ roadNetwork <- phigh$osm_lines[which(phigh$osm_lines$highway =="footway" |
                           phigh$osm_lines$highway == "service" |
                           phigh$osm_lines$highway == "tertiary" |
                           phigh$osm_lines$highway == "residential" |
-                          #phigh$osm_lines$junction == "roundabout" |
-                          phigh$osm_polygons$junction == "roundabout"),]
+                          phigh$osm_lines$junction == "roundabout" |
+                          phigh$osm_polygons$junction == "roundabout" |
+                          phigh$osm_lines$highway == "primary"),]
+
+qtm(roadNetwork)
 
 view(phigh$osm_lines[which(phigh$osm_lines$junction == "roundabout"),]) %>% qtm()
-
 
 view(phigh$osm_lines[is.na(phigh$osm_lines$cycleway) == F,])
 
@@ -396,6 +496,16 @@ for (i in 3:length(phigh$osm_polygons)-1) {
 view(sumhighpoly)
 
 qtm(phigh$osm_polygons[which(phigh$osm_polygons$junction == "roundabout"),])
+
+# highway Multilines
+
+view(phigh$osm_multilines) #%>% qtm()
+phigh$osm_multilines <- NULL
+
+# highways multipolygons
+# unused
+class(phigh$osm_multipolygons)
+view(phigh$osm_multipolygons)
 
 ##
 ############ POROSITY #########
